@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Escaparate</title>
+</head>
+<body>
+  <h1>Escaparate de productos</h1>
+  <div id="productos"></div>
+
+  <script>
+    // Aquí iría el código para cargar tus productos automáticamente
+    fetch('/productos.json')
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById('productos');
+        data.forEach(p => {
+          container.innerHTML += `
+            <div>
+              <h2>${p.nombre}</h2>
+              <p>${p.descripcion}</p>
+              <strong>${p.precio}</strong>
+            </div>
+          `;
+        });
+      });
+  </script>
+</body>
+</html>
