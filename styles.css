@@ -42,11 +42,36 @@ h2 {
     margin-bottom: 20px;
 }
 
+/* MEJORA: Grid responsive mejorado */
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 30px;
     margin-bottom: 40px;
+    
+    /* Por defecto: 1 columna en móviles */
+    grid-template-columns: 1fr;
+}
+
+/* Tablets: 2 columnas */
+@media (min-width: 768px) {
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Desktop: 3 columnas */
+@media (min-width: 1024px) {
+    .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+    }
+}
+
+/* Desktop grande: mantener 3 columnas pero con mejor espaciado */
+@media (min-width: 1200px) {
+    .products-grid {
+        gap: 30px;
+    }
 }
 
 .product-card {
@@ -56,6 +81,11 @@ h2 {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
+    
+    /* Altura fija para que todas las tarjetas tengan el mismo tamaño */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .product-card:hover {
@@ -67,6 +97,14 @@ h2 {
     position: relative;
     height: 250px;
     overflow: hidden;
+    
+    /* En desktop, ajustar altura */
+}
+
+@media (min-width: 1024px) {
+    .image-carousel {
+        height: 200px; /* Altura más compacta en desktop */
+    }
 }
 
 .carousel-image {
@@ -89,6 +127,7 @@ h2 {
     transform: translateX(-50%);
     display: flex;
     gap: 8px;
+    z-index: 2;
 }
 
 .nav-dot {
@@ -107,6 +146,10 @@ h2 {
 
 .product-info {
     padding: 25px;
+    flex: 1; /* Permite que el contenido ocupe el espacio disponible */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .product-name {
@@ -114,6 +157,14 @@ h2 {
     font-weight: bold;
     color: #2d3748;
     margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+/* En desktop, ajustar tamaño de fuente */
+@media (min-width: 1024px) {
+    .product-name {
+        font-size: 1.2rem;
+    }
 }
 
 .product-price {
@@ -121,6 +172,12 @@ h2 {
     color: #48bb78;
     font-weight: bold;
     margin-bottom: 15px;
+}
+
+@media (min-width: 1024px) {
+    .product-price {
+        font-size: 1.6rem;
+    }
 }
 
 .wallapop-btn {
@@ -133,6 +190,8 @@ h2 {
     font-weight: bold;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(19, 206, 102, 0.3);
+    text-align: center;
+    margin-top: auto; /* Empuja el botón hacia abajo */
 }
 
 .wallapop-btn:hover {
@@ -336,7 +395,39 @@ h2 {
     color: rgba(255, 255, 255, 0.9);
 }
 
-@media (max-width: 768px) {
+/* Loading styles */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
     .container {
         padding: 15px;
     }
@@ -345,9 +436,8 @@ h2 {
         font-size: 2rem;
     }
     
-    .products-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
+    .product-info {
+        padding: 20px;
     }
     
     .modal-content {
@@ -356,5 +446,39 @@ h2 {
     
     .admin-section {
         padding: 20px;
+    }
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .product-name {
+        font-size: 1.3rem;
+    }
+    
+    .product-price {
+        font-size: 1.7rem;
+    }
+    
+    .image-carousel {
+        height: 220px;
+    }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1024px) {
+    /* Hacer las tarjetas más compactas pero elegantes */
+    .product-info {
+        padding: 20px;
+    }
+    
+    /* Mejorar la distribución del espacio */
+    .container {
+        padding: 30px 20px;
+    }
+    
+    /* Header más compacto en desktop */
+    header {
+        padding: 25px;
+        margin-bottom: 35px;
     }
 }
