@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Mi Escaparate</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Panel de Administración</h1>
+            <p>Gestiona tus productos</p>
+        </header>
+
+        <div class="back-btn-container">
+            <a href="index.html" class="back-btn">← Volver al Escaparate</a>
+        </div>
+
+        <!-- Modal de login admin -->
+        <div id="login-modal" class="modal" style="display: block;">
+            <div class="modal-content">
+                <h2>Acceso de Administrador</h2>
+                <div class="form-group">
+                    <label for="admin-password">Contraseña:</label>
+                    <input type="password" id="admin-password" placeholder="Ingresa la contraseña" onkeypress="handleEnterKey(event)">
+                </div>
+                <button class="btn" onclick="checkAdminPassword()">Acceder</button>
+                <div id="error-message" class="error-message" style="display: none;">
+                    Contraseña incorrecta
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido de administración (oculto inicialmente) -->
+        <div id="admin-content" style="display: none;">
+            <div class="admin-section">
+                <h2>Añadir Nuevo Producto</h2>
+                <form id="product-form" class="product-form">
+                    <div class="form-group">
+                        <label for="product-name">Nombre del Producto:</label>
+                        <input type="text" id="product-name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-price">Precio (€):</label>
+                        <input type="number" id="product-price" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="wallapop-link">Enlace de Wallapop:</label>
+                        <input type="url" id="wallapop-link" placeholder="https://es.wallapop.com/..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-images">Imágenes del Producto:</label>
+                        <input type="file" id="product-images" class="file-input" multiple accept="image/*" onchange="previewImages()">
+                        <div id="image-preview" class="image-preview"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn">Añadir Producto</button>
+                </form>
+            </div>
+
+            <div class="admin-section">
+                <h2>Productos Existentes</h2>
+                <div id="admin-products-list">
+                    <!-- Lista de productos para administración -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
