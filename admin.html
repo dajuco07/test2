@@ -23,9 +23,9 @@
                 <h2>Acceso de Administrador</h2>
                 <div class="form-group">
                     <label for="admin-password">Contraseña:</label>
-                    <input type="password" id="admin-password" placeholder="Ingresa la contraseña" onkeypress="handleEnterKey(event)">
+                    <input type="password" id="admin-password" placeholder="Ingresa la contraseña">
                 </div>
-                <button class="btn" onclick="checkAdminPassword()">Acceder</button>
+                <button class="btn" id="login-btn">Acceder</button>
                 <div id="error-message" class="error-message" style="display: none;">
                     Contraseña incorrecta
                 </div>
@@ -54,7 +54,7 @@
                     
                     <div class="form-group">
                         <label for="product-images">Imágenes del Producto:</label>
-                        <input type="file" id="product-images" class="file-input" multiple accept="image/*" onchange="previewImages()">
+                        <input type="file" id="product-images" class="file-input" multiple accept="image/*">
                         <small style="color: #666; font-size: 14px; margin-top: 5px; display: block;">
                             Puedes seleccionar hasta 10 imágenes. Máximo 2MB por imagen.
                             Formatos: JPG, PNG, GIF, WebP
@@ -81,14 +81,14 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // Import the functions you need from the SDKs you need
+        // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
         import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-        // TODO: Reemplaza con tu configuración de Firebase
+        // Firebase configuration - REEMPLAZA CON TUS DATOS
         const firebaseConfig = {
             apiKey: "AIzaSyArX8CmuYlHfMS62pUtYInOH-gtk_d5gdY",
-        authDomain: "dajuco07-eb5e5.firebaseapp.com",
+            authDomain: "dajuco07-eb5e5.firebaseapp.com",
             projectId: "dajuco07-eb5e5",
             storageBucket: "dajuco07-eb5e5.firebasestorage.app",
             messagingSenderId: "591757692804",
@@ -96,54 +96,62 @@
             measurementId: "G-DYGNBNQ3H9"
         };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Contraseña de administrador (cámbiala por la tuya)
+        // Contraseña de administrador - CAMBIA ESTA LÍNEA
         const ADMIN_PASSWORD = "admin123";
 
-        let products = [];
+        let app, db, products = [];
+        let firebaseInitialized = false;
 
-        // Función para verificar contraseña admin
-        window.checkAdminPassword = function() {
-            const password = document.getElementById('admin-password').value;
+        // Initialize Firebase if config is provided
+        function initializeFirebase() {
+            try {
+                if (firebaseConfig.apiKey !== "TU_API_KEY") {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    firebaseInitialized = true;
+                    console.log("✅ Firebase inicializado correctamente");
+                } else {
+                    console.log("⚠️ Firebase no configurado, usando localStorage");
+                    firebaseInitialized = false;
+                    // Usar localStorage como fallback
+                    products = JSON.parse(localStorage.getItem('products') || '[]');
+                }
+            } catch (error) {
+                console.error("❌ Error inicializando Firebase:", error);
+                firebaseInitialized = false;
+                products = JSON.parse(localStorage.getItem('products') || '[]');
+            }
+        }
+
+        // Verificar contraseña admin
+        function checkAdminPassword() {
+            const passwordInput = document.getElementById('admin-password');
+            const password = passwordInput.value;
             const errorMessage = document.getElementById('error-message');
             
             if (password === ADMIN_PASSWORD) {
                 document.getElementById('login-modal').style.display = 'none';
                 document.getElementById('admin-content').style.display = 'block';
-                loadAdminProducts();
-                document.getElementById('admin-password').value = '';
+                passwordInput.value = '';
                 errorMessage.style.display = 'none';
+                loadAdminProducts();
             } else {
                 errorMessage.style.display = 'block';
-                document.getElementById('admin-password').value = '';
-                // Hacer que el campo se agite para indicar error
-                const passwordInput = document.getElementById('admin-password');
+                passwordInput.value = '';
                 passwordInput.style.animation = 'shake 0.5s ease-in-out';
                 setTimeout(() => {
                     passwordInput.style.animation = '';
                 }, 500);
             }
-        };
+        }
 
-        // Función para manejar Enter en el campo de contraseña
-        window.handleEnterKey = function(event) {
-            if (event.key === 'Enter') {
-                checkAdminPassword();
-            }
-        };
-
-        // Función para previsualizar imágenes
-        window.previewImages = function() {
+        // Previsualizar imágenes
+        function previewImages() {
             const fileInput = document.getElementById('product-images');
             const preview = document.getElementById('image-preview');
             preview.innerHTML = '';
 
-            if (fileInput.files.length === 0) {
-                return;
-            }
+            if (fileInput.files.length === 0) return;
 
             if (fileInput.files.length > 10) {
                 alert('Solo puedes seleccionar un máximo de 10 imágenes');
@@ -152,13 +160,11 @@
             }
 
             Array.from(fileInput.files).forEach((file, index) => {
-                // Verificar que sea una imagen
                 if (!file.type.startsWith('image/')) {
                     alert(`El archivo ${file.name} no es una imagen válida`);
                     return;
                 }
 
-                // Verificar tamaño
                 if (file.size > 2 * 1024 * 1024) {
                     alert(`La imagen ${file.name} es demasiado grande (máximo 2MB)`);
                     return;
@@ -174,7 +180,6 @@
                     img.className = 'preview-image';
                     img.title = file.name;
                     
-                    // Botón para eliminar imagen individual
                     const removeBtn = document.createElement('button');
                     removeBtn.innerHTML = '×';
                     removeBtn.style.cssText = `
@@ -197,15 +202,12 @@
                     imgContainer.appendChild(removeBtn);
                     preview.appendChild(imgContainer);
                 };
-                reader.onerror = function() {
-                    alert(`Error al cargar la imagen ${file.name}`);
-                };
                 reader.readAsDataURL(file);
             });
-        };
+        }
 
-        // Función para eliminar una imagen específica de la previsualización
-        window.removeImageFromPreview = function(indexToRemove) {
+        // Eliminar imagen de preview
+        function removeImageFromPreview(indexToRemove) {
             const fileInput = document.getElementById('product-images');
             const dt = new DataTransfer();
             
@@ -217,46 +219,69 @@
             
             fileInput.files = dt.files;
             previewImages();
-        };
+        }
 
-        // Función para mostrar loading en admin
+        // Mostrar loading admin
         function showAdminLoading(show = true) {
             const loading = document.getElementById('admin-loading');
             loading.style.display = show ? 'flex' : 'none';
         }
 
-        // Función para añadir producto a Firebase
-        async function addProductToFirebase(productData) {
-            try {
-                const docRef = await addDoc(collection(db, "products"), {
+        // Añadir producto
+        async function addProduct(productData) {
+            if (firebaseInitialized) {
+                try {
+                    await addDoc(collection(db, "products"), {
+                        ...productData,
+                        dateAdded: serverTimestamp()
+                    });
+                    showNotification('Producto añadido correctamente');
+                    return true;
+                } catch (error) {
+                    console.error("Error adding product: ", error);
+                    showNotification('Error al añadir el producto', 'error');
+                    return false;
+                }
+            } else {
+                // Usar localStorage
+                const product = {
                     ...productData,
-                    dateAdded: serverTimestamp()
-                });
-                console.log("Product added with ID: ", docRef.id);
+                    id: Date.now(),
+                    dateAdded: new Date().toISOString()
+                };
+                products.push(product);
+                localStorage.setItem('products', JSON.stringify(products));
+                loadAdminProducts();
+                showNotification('Producto añadido correctamente');
                 return true;
-            } catch (error) {
-                console.error("Error adding product: ", error);
-                throw error;
             }
         }
 
-        // Función para eliminar producto de Firebase
-        window.deleteProduct = async function(productId) {
+        // Eliminar producto
+        async function deleteProduct(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
             
             if (confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?\n\nEsta acción no se puede deshacer.`)) {
-                try {
-                    await deleteDoc(doc(db, "products", productId));
-                    showNotification('Producto eliminado correctamente', 'success');
-                } catch (error) {
-                    console.error("Error deleting product: ", error);
-                    showNotification('Error al eliminar el producto', 'error');
+                if (firebaseInitialized) {
+                    try {
+                        await deleteDoc(doc(db, "products", productId));
+                        showNotification('Producto eliminado correctamente');
+                    } catch (error) {
+                        console.error("Error deleting product: ", error);
+                        showNotification('Error al eliminar el producto', 'error');
+                    }
+                } else {
+                    // Usar localStorage
+                    products = products.filter(p => p.id !== productId);
+                    localStorage.setItem('products', JSON.stringify(products));
+                    loadAdminProducts();
+                    showNotification('Producto eliminado correctamente');
                 }
             }
-        };
+        }
 
-        // Función para mostrar notificaciones
+        // Mostrar notificación
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -274,34 +299,34 @@
             notification.textContent = message;
             document.body.appendChild(notification);
             
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+            setTimeout(() => notification.remove(), 3000);
         }
 
-        // Función para cargar productos en el panel admin
+        // Cargar productos admin
         function loadAdminProducts() {
-            showAdminLoading(true);
-            
-            const q = query(collection(db, "products"), orderBy("dateAdded", "desc"));
-            onSnapshot(q, (querySnapshot) => {
-                products = [];
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    products.push({
-                        id: doc.id,
-                        ...data
+            if (firebaseInitialized) {
+                showAdminLoading(true);
+                const q = query(collection(db, "products"), orderBy("dateAdded", "desc"));
+                onSnapshot(q, (querySnapshot) => {
+                    products = [];
+                    querySnapshot.forEach((doc) => {
+                        products.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
                     });
+                    displayAdminProducts();
+                    showAdminLoading(false);
+                }, (error) => {
+                    console.error("Error loading products:", error);
+                    showAdminLoading(false);
                 });
+            } else {
                 displayAdminProducts();
-                showAdminLoading(false);
-            }, (error) => {
-                console.error("Error loading admin products:", error);
-                showAdminLoading(false);
-                showNotification('Error al cargar los productos', 'error');
-            });
+            }
         }
 
+        // Mostrar productos en admin
         function displayAdminProducts() {
             const container = document.getElementById('admin-products-list');
             
@@ -324,10 +349,10 @@
                         <p><strong>Fecha añadido:</strong> ${dateAdded}</p>
                         <p><strong>Enlace:</strong> <a href="${product.wallapopLink}" target="_blank" style="color: #667eea;">Ver en Wallapop</a></p>
                         <div style="margin-top: 15px;">
-                            <button class="btn btn-danger" onclick="deleteProduct('${product.id}')">
+                            <button class="btn btn-danger" onclick="window.deleteProductHandler('${product.id}')">
                                 Eliminar Producto
                             </button>
-                            <button class="btn" onclick="viewProduct('${product.id}')" style="background: #4a5568;">
+                            <button class="btn" onclick="window.viewProductHandler('${product.id}')" style="background: #4a5568;">
                                 Ver Detalles
                             </button>
                         </div>
@@ -336,12 +361,12 @@
             }).join('');
         }
 
-        // Función para ver detalles del producto
-        window.viewProduct = function(productId) {
+        // Ver producto
+        function viewProduct(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
             
-            const images = (product.images || []).map((img, index) => 
+            const images = (product.images || []).map((img) => 
                 `<img src="${img}" alt="${product.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 5px; margin: 5px;">`
             ).join('');
             
@@ -369,20 +394,33 @@
             `;
             
             document.body.appendChild(modal);
-            
-            // Cerrar modal al hacer clic fuera
-            modal.onclick = function(event) {
-                if (event.target === modal) {
-                    modal.remove();
-                }
+            modal.onclick = (event) => {
+                if (event.target === modal) modal.remove();
             };
-        };
+        }
 
-        // Configurar el formulario
+        // Exponer funciones globalmente para onclick
+        window.deleteProductHandler = deleteProduct;
+        window.viewProductHandler = viewProduct;
+
+        // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            const productForm = document.getElementById('product-form');
+            initializeFirebase();
+
+            // Login
+            const loginBtn = document.getElementById('login-btn');
+            const passwordInput = document.getElementById('admin-password');
             
-            productForm.addEventListener('submit', async function(e) {
+            loginBtn.addEventListener('click', checkAdminPassword);
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') checkAdminPassword();
+            });
+
+            // Imagen preview
+            document.getElementById('product-images').addEventListener('change', previewImages);
+
+            // Formulario
+            document.getElementById('product-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
                 const name = document.getElementById('product-name').value.trim();
@@ -390,7 +428,6 @@
                 const wallapopLink = document.getElementById('wallapop-link').value.trim();
                 const imageFiles = document.getElementById('product-images').files;
                 
-                // Validaciones
                 if (!name || !price || !wallapopLink) {
                     alert('Por favor, completa todos los campos obligatorios');
                     return;
@@ -405,35 +442,23 @@
                     alert('Por favor, añade al menos una imagen');
                     return;
                 }
-                
-                // Validar que el enlace sea de Wallapop
-                if (!wallapopLink.includes('wallapop.com')) {
-                    if (!confirm('El enlace no parece ser de Wallapop. ¿Continuar de todos modos?')) {
-                        return;
-                    }
-                }
-                
-                const images = [];
-                let processedImages = 0;
-                const maxImages = 10;
-                
-                if (imageFiles.length > maxImages) {
-                    alert(`Solo puedes subir un máximo de ${maxImages} imágenes`);
+
+                if (imageFiles.length > 10) {
+                    alert('Solo puedes subir un máximo de 10 imágenes');
                     return;
                 }
                 
-                // Mostrar indicador de carga
-                const submitBtn = productForm.querySelector('button[type="submit"]');
+                const submitBtn = this.querySelector('button[type="submit"]');
                 const originalText = submitBtn.textContent;
                 submitBtn.textContent = 'Procesando...';
                 submitBtn.disabled = true;
                 
                 try {
-                    // Convertir imágenes a base64
+                    const images = [];
+                    
                     for (let i = 0; i < imageFiles.length; i++) {
                         const file = imageFiles[i];
                         
-                        // Verificar tamaño del archivo
                         if (file.size > 2 * 1024 * 1024) {
                             throw new Error(`La imagen ${file.name} es demasiado grande. Máximo 2MB por imagen.`);
                         }
@@ -441,76 +466,67 @@
                         const base64 = await new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onload = () => resolve(reader.result);
-                            reader.onerror = () => reject(new Error(`Error al procesar ${file.name}`));
+                            reader.onerror = reject;
                             reader.readAsDataURL(file);
                         });
                         
                         images.push(base64);
-                        processedImages++;
-                        submitBtn.textContent = `Procesando... ${processedImages}/${imageFiles.length}`;
+                        submitBtn.textContent = `Procesando... ${i + 1}/${imageFiles.length}`;
                     }
                     
-                    // Crear objeto del producto
-                    const productData = {
-                        name,
-                        price,
-                        wallapopLink,
-                        images
-                    };
+                    const productData = { name, price, wallapopLink, images };
+                    const success = await addProduct(productData);
                     
-                    // Añadir a Firebase
-                    await addProductToFirebase(productData);
-                    
-                    // Resetear formulario
-                    productForm.reset();
-                    document.getElementById('image-preview').innerHTML = '';
-                    
-                    showNotification('Producto añadido correctamente');
-                    window.scrollTo(0, 0);
+                    if (success) {
+                        this.reset();
+                        document.getElementById('image-preview').innerHTML = '';
+                        window.scrollTo(0, 0);
+                    }
                     
                 } catch (error) {
-                    console.error('Error adding product:', error);
+                    console.error('Error:', error);
                     showNotification(error.message || 'Error al añadir el producto', 'error');
                 } finally {
-                    // Restaurar botón
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
                 }
             });
 
-            // Enfocar el campo de contraseña al cargar la página
-            document.getElementById('admin-password').focus();
+            // Focus password
+            passwordInput.focus();
         });
+    </script>
 
-        // Añadir animación de shake para el error de contraseña
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                25% { transform: translateX(-5px); }
-                75% { transform: translateX(5px); }
-            }
-            
-            .loading {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 40px 20px;
-                color: #666;
-            }
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #666;
+        }
 
-            .loading-spinner {
-                width: 30px;
-                height: 30px;
-                border: 3px solid #f3f3f3;
-                border-top: 3px solid #667eea;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin-bottom: 15px;
-            }
+        .loading-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
 
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }`
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>
