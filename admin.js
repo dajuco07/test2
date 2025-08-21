@@ -40,16 +40,82 @@ function previewImages() {
     const preview = document.getElementById('image-preview');
     preview.innerHTML = '';
 
-    Array.from(fileInput.files).forEach(file => {
+    if (fileInput.files.length === 0) {
+        return;
+    }
+
+    if (fileInput.files.length > 10) {
+        alert('Solo puedes seleccionar un máximo de 10 imágenes');
+        fileInput.value = '';
+        return;
+    }
+
+    Array.from(fileInput.files).forEach((file, index) => {
+        // Verificar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            alert(`El archivo ${file.name} no es una imagen válida`);
+            return;
+        }
+
+        // Verificar tamaño
+        if (file.size > 2 * 1024 * 1024) {
+            alert(`La imagen ${file.name} es demasiado grande (máximo 2MB)`);
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(e) {
+            const imgContainer = document.createElement('div');
+            imgContainer.style.cssText = 'position: relative; display: inline-block;';
+            
             const img = document.createElement('img');
             img.src = e.target.result;
             img.className = 'preview-image';
-            preview.appendChild(img);
+            img.title = file.name;
+            
+            // Botón para eliminar imagen individual
+            const removeBtn = document.createElement('button');
+            removeBtn.innerHTML = '×';
+            removeBtn.style.cssText = `
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #ff4444;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                cursor: pointer;
+                font-size: 14px;
+                line-height: 1;
+            `;
+            removeBtn.onclick = () => removeImageFromPreview(index);
+            
+            imgContainer.appendChild(img);
+            imgContainer.appendChild(removeBtn);
+            preview.appendChild(imgContainer);
+        };
+        reader.onerror = function() {
+            alert(`Error al cargar la imagen ${file.name}`);
         };
         reader.readAsDataURL(file);
     });
+}
+
+// Función para eliminar una imagen específica de la previsualización
+function removeImageFromPreview(indexToRemove) {
+    const fileInput = document.getElementById('product-images');
+    const dt = new DataTransfer();
+    
+    Array.from(fileInput.files).forEach((file, index) => {
+        if (index !== indexToRemove) {
+            dt.items.add(file);
+        }
+    });
+    
+    fileInput.files = dt.files;
+    previewImages();
 }
 
 // Función para añadir producto
@@ -103,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
         
         // Convertir imágenes a base64
-        Array.from(imageFiles).forEach(file => {
+        Array.from(imageFiles).forEach((file, index) => {
             // Verificar tamaño del archivo (máximo 2MB por imagen)
             if (file.size > 2 * 1024 * 1024) {
                 alert(`La imagen ${file.name} es demasiado grande. Máximo 2MB por imagen.`);
@@ -116,6 +182,9 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.onload = function(e) {
                 images.push(e.target.result);
                 processedImages++;
+                
+                // Actualizar progreso
+                submitBtn.textContent = `Procesando... ${processedImages}/${imageFiles.length}`;
                 
                 if (processedImages === imageFiles.length) {
                     const product = {
@@ -145,6 +214,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Scroll al top para ver el mensaje
                     window.scrollTo(0, 0);
                 }
+            };
+            reader.onerror = function() {
+                alert(`Error al procesar la imagen ${file.name}`);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             };
             reader.readAsDataURL(file);
         });

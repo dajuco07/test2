@@ -233,16 +233,36 @@ h2 {
 .image-preview {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 10px;
+    gap: 15px;
+    margin-top: 15px;
+    padding: 15px;
+    border: 2px dashed #e2e8f0;
+    border-radius: 10px;
+    min-height: 60px;
+    align-items: center;
+}
+
+.image-preview:empty::after {
+    content: "Las imágenes seleccionadas aparecerán aquí";
+    color: #a0aec0;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
 }
 
 .preview-image {
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
     object-fit: cover;
-    border-radius: 8px;
-    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    border: 3px solid #e2e8f0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-image:hover {
+    border-color: #667eea;
+    transform: scale(1.05);
 }
 
 .btn {
