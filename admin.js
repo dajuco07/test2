@@ -1,8 +1,9 @@
-// Contraseña de administrador (cámbiala por la tuya)
-const ADMIN_PASSWORD = "admin123";
+// Contraseña de administrador
+const ADMIN_PASSWORD = "admin123"; // CAMBIA ESTA CONTRASEÑA
 
-// Array para almacenar productos
-let products = JSON.parse(localStorage.getItem('products') || '[]');
+// Array para almacenar productos (ahora se carga desde Netlify)
+let products = [];
+let currentAdminPassword = "";
 
 // Función para verificar contraseña admin
 function checkAdminPassword() {
@@ -10,6 +11,7 @@ function checkAdminPassword() {
     const errorMessage = document.getElementById('error-message');
     
     if (password === ADMIN_PASSWORD) {
+        currentAdminPassword = password; // Guardar contraseña para las API calls
         document.getElementById('login-modal').style.display = 'none';
         document.getElementById('admin-content').style.display = 'block';
         loadAdminProducts();
@@ -18,20 +20,14 @@ function checkAdminPassword() {
     } else {
         errorMessage.style.display = 'block';
         document.getElementById('admin-password').value = '';
-        // Hacer que el campo se agite para indicar error
         const passwordInput = document.getElementById('admin-password');
         passwordInput.style.animation = 'shake 0.5s ease-in-out';
-        setTimeout(() => {
-            passwordInput.style.animation = '';
-        }, 500);
+        setTimeout(() => passwordInput.style.animation = '', 500);
     }
 }
 
-// Función para manejar Enter en el campo de contraseña
 function handleEnterKey(event) {
-    if (event.key === 'Enter') {
-        checkAdminPassword();
-    }
+    if (event.key === 'Enter') checkAdminPassword();
 }
 
 // Función para previsualizar imágenes
@@ -40,10 +36,7 @@ function previewImages() {
     const preview = document.getElementById('image-preview');
     preview.innerHTML = '';
 
-    if (fileInput.files.length === 0) {
-        return;
-    }
-
+    if (fileInput.files.length === 0) return;
     if (fileInput.files.length > 10) {
         alert('Solo puedes seleccionar un máximo de 10 imágenes');
         fileInput.value = '';
@@ -51,13 +44,10 @@ function previewImages() {
     }
 
     Array.from(fileInput.files).forEach((file, index) => {
-        // Verificar que sea una imagen
         if (!file.type.startsWith('image/')) {
             alert(`El archivo ${file.name} no es una imagen válida`);
             return;
         }
-
-        // Verificar tamaño
         if (file.size > 2 * 1024 * 1024) {
             alert(`La imagen ${file.name} es demasiado grande (máximo 2MB)`);
             return;
@@ -73,22 +63,12 @@ function previewImages() {
             img.className = 'preview-image';
             img.title = file.name;
             
-            // Botón para eliminar imagen individual
             const removeBtn = document.createElement('button');
             removeBtn.innerHTML = '×';
             removeBtn.style.cssText = `
-                position: absolute;
-                top: -5px;
-                right: -5px;
-                background: #ff4444;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                width: 20px;
-                height: 20px;
-                cursor: pointer;
-                font-size: 14px;
-                line-height: 1;
+                position: absolute; top: -5px; right: -5px; background: #ff4444;
+                color: white; border: none; border-radius: 50%; width: 20px; height: 20px;
+                cursor: pointer; font-size: 14px; line-height: 1;
             `;
             removeBtn.onclick = () => removeImageFromPreview(index);
             
@@ -96,33 +76,28 @@ function previewImages() {
             imgContainer.appendChild(removeBtn);
             preview.appendChild(imgContainer);
         };
-        reader.onerror = function() {
-            alert(`Error al cargar la imagen ${file.name}`);
-        };
+        reader.onerror = () => alert(`Error al cargar la imagen ${file.name}`);
         reader.readAsDataURL(file);
     });
 }
 
-// Función para eliminar una imagen específica de la previsualización
 function removeImageFromPreview(indexToRemove) {
     const fileInput = document.getElementById('product-images');
     const dt = new DataTransfer();
     
     Array.from(fileInput.files).forEach((file, index) => {
-        if (index !== indexToRemove) {
-            dt.items.add(file);
-        }
+        if (index !== indexToRemove) dt.items.add(file);
     });
     
     fileInput.files = dt.files;
     previewImages();
 }
 
-// Función para añadir producto
+// Función para añadir producto usando Netlify Functions
 document.addEventListener('DOMContentLoaded', function() {
     const productForm = document.getElementById('product-form');
     
-    productForm.addEventListener('submit', function(e) {
+    productForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const name = document.getElementById('product-name').value.trim();
@@ -135,128 +110,121 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Por favor, completa todos los campos obligatorios');
             return;
         }
-        
         if (price <= 0) {
             alert('El precio debe ser mayor que 0');
             return;
         }
-        
         if (imageFiles.length === 0) {
             alert('Por favor, añade al menos una imagen');
             return;
         }
-        
-        // Validar que el enlace sea de Wallapop
         if (!wallapopLink.includes('wallapop.com')) {
             if (!confirm('El enlace no parece ser de Wallapop. ¿Continuar de todos modos?')) {
                 return;
             }
         }
         
-        const images = [];
-        let processedImages = 0;
-        const maxImages = 10; // Límite de imágenes
-        
-        if (imageFiles.length > maxImages) {
-            alert(`Solo puedes subir un máximo de ${maxImages} imágenes`);
-            return;
-        }
-        
-        // Mostrar indicador de carga
         const submitBtn = productForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.textContent = 'Procesando...';
         submitBtn.disabled = true;
         
-        // Convertir imágenes a base64
-        Array.from(imageFiles).forEach((file, index) => {
-            // Verificar tamaño del archivo (máximo 2MB por imagen)
-            if (file.size > 2 * 1024 * 1024) {
-                alert(`La imagen ${file.name} es demasiado grande. Máximo 2MB por imagen.`);
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                return;
+        try {
+            // Convertir imágenes a base64
+            const images = await Promise.all(
+                Array.from(imageFiles).map(file => {
+                    if (file.size > 2 * 1024 * 1024) {
+                        throw new Error(`La imagen ${file.name} es demasiado grande. Máximo 2MB.`);
+                    }
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = e => resolve(e.target.result);
+                        reader.onerror = () => reject(new Error(`Error al procesar ${file.name}`));
+                        reader.readAsDataURL(file);
+                    });
+                })
+            );
+            
+            // Enviar a Netlify Function
+            const response = await fetch('/.netlify/functions/add-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    price,
+                    wallapopLink,
+                    images,
+                    adminPassword: currentAdminPassword
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Resetear formulario
+                productForm.reset();
+                document.getElementById('image-preview').innerHTML = '';
+                
+                showNotification('Producto añadido correctamente', 'success');
+                loadAdminProducts(); // Recargar lista
+                window.scrollTo(0, 0);
+            } else {
+                throw new Error(result.error || 'Error al añadir producto');
             }
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                images.push(e.target.result);
-                processedImages++;
-                
-                // Actualizar progreso
-                submitBtn.textContent = `Procesando... ${processedImages}/${imageFiles.length}`;
-                
-                if (processedImages === imageFiles.length) {
-                    const product = {
-                        id: Date.now(),
-                        name,
-                        price,
-                        wallapopLink,
-                        images,
-                        dateAdded: new Date().toLocaleDateString('es-ES')
-                    };
-                    
-                    products.push(product);
-                    localStorage.setItem('products', JSON.stringify(products));
-                    
-                    loadAdminProducts();
-                    
-                    // Resetear formulario
-                    productForm.reset();
-                    document.getElementById('image-preview').innerHTML = '';
-                    
-                    // Restaurar botón
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                    
-                    alert('Producto añadido correctamente');
-                    
-                    // Scroll al top para ver el mensaje
-                    window.scrollTo(0, 0);
-                }
-            };
-            reader.onerror = function() {
-                alert(`Error al procesar la imagen ${file.name}`);
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            };
-            reader.readAsDataURL(file);
-        });
+        } catch (error) {
+            showNotification(`Error: ${error.message}`, 'error');
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
     });
 });
 
-// Función para cargar productos en el panel admin
-function loadAdminProducts() {
+// Función para cargar productos desde Netlify
+async function loadAdminProducts() {
     const container = document.getElementById('admin-products-list');
+    container.innerHTML = '<p style="text-align: center;">Cargando productos...</p>';
     
-    if (products.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">No hay productos añadidos aún.</p>';
-        return;
-    }
-    
-    // Ordenar productos por fecha (más recientes primero)
-    const sortedProducts = [...products].sort((a, b) => b.id - a.id);
-    
-    container.innerHTML = sortedProducts.map(product => `
-        <div class="product-item">
-            <h4>${product.name}</h4>
-            <p><strong>Precio:</strong> ${product.price.toFixed(2)}€</p>
-            <p><strong>Imágenes:</strong> ${product.images.length}</p>
-            <p><strong>Fecha añadido:</strong> ${product.dateAdded || 'No disponible'}</p>
-            <p><strong>Enlace:</strong> <a href="${product.wallapopLink}" target="_blank" style="color: #667eea;">Ver en Wallapop</a></p>
-            <div style="margin-top: 15px;">
-                <button class="btn btn-danger" onclick="deleteProduct(${product.id})">
-                    Eliminar Producto
-                </button>
-                <button class="btn" onclick="viewProduct(${product.id})" style="background: #4a5568;">
-                    Ver Detalles
-                </button>
+    try {
+        const response = await fetch('/.netlify/functions/get-products');
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error || 'Error al cargar productos');
+        
+        products = data.products || [];
+        
+        if (products.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">No hay productos añadidos aún.</p>';
+            return;
+        }
+        
+        const sortedProducts = [...products].sort((a, b) => b.id - a.id);
+        
+        container.innerHTML = sortedProducts.map(product => `
+            <div class="product-item">
+                <h4>${product.name}</h4>
+                <p><strong>Precio:</strong> ${product.price.toFixed(2)}€</p>
+                <p><strong>Imágenes:</strong> ${product.images.length}</p>
+                <p><strong>Fecha añadido:</strong> ${product.dateAdded || 'No disponible'}</p>
+                <p><strong>Enlace:</strong> <a href="${product.wallapopLink}" target="_blank" style="color: #667eea;">Ver en Wallapop</a></p>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-danger" onclick="deleteProduct(${product.id})">
+                        Eliminar Producto
+                    </button>
+                    <button class="btn" onclick="viewProduct(${product.id})" style="background: #4a5568;">
+                        Ver Detalles
+                    </button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+        
+    } catch (error) {
+        container.innerHTML = `<p style="color: #e53e3e; text-align: center;">Error al cargar productos: ${error.message}</p>`;
+        showNotification(`Error al cargar productos: ${error.message}`, 'error');
+    }
 }
 
-// Función para ver detalles del producto
 function viewProduct(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
@@ -276,57 +244,62 @@ function viewProduct(productId) {
             <p><strong>Enlace Wallapop:</strong> <a href="${product.wallapopLink}" target="_blank">${product.wallapopLink}</a></p>
             <div style="margin: 20px 0;">
                 <strong>Imágenes (${product.images.length}):</strong>
-                <div style="margin-top: 10px;">
-                    ${images}
-                </div>
+                <div style="margin-top: 10px;">${images}</div>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
-    
-    // Cerrar modal al hacer clic fuera
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.remove();
-        }
-    };
+    modal.onclick = event => { if (event.target === modal) modal.remove(); };
 }
 
-// Función para eliminar producto
-function deleteProduct(productId) {
+// Función para eliminar producto usando Netlify Functions
+async function deleteProduct(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     
     if (confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?\n\nEsta acción no se puede deshacer.`)) {
-        products = products.filter(p => p.id !== productId);
-        localStorage.setItem('products', JSON.stringify(products));
-        loadAdminProducts();
-        
-        // Mostrar confirmación
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #48bb78;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
-            z-index: 10000;
-            font-weight: bold;
-        `;
-        notification.textContent = 'Producto eliminado correctamente';
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+        try {
+            const response = await fetch('/.netlify/functions/delete-product', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    productId,
+                    adminPassword: currentAdminPassword
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showNotification('Producto eliminado correctamente', 'success');
+                loadAdminProducts(); // Recargar lista
+            } else {
+                throw new Error(result.error || 'Error al eliminar producto');
+            }
+            
+        } catch (error) {
+            showNotification(`Error: ${error.message}`, 'error');
+        }
     }
 }
 
-// Añadir animación de shake para el error de contraseña
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed; top: 20px; right: 20px;
+        background: ${type === 'success' ? '#48bb78' : '#e53e3e'};
+        color: white; padding: 15px 20px; border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); z-index: 10000;
+        font-weight: bold; max-width: 300px;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.remove(), 4000);
+}
+
+// Añadir animación de shake
 const style = document.createElement('style');
 style.textContent = `
     @keyframes shake {
@@ -337,7 +310,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Enfocar el campo de contraseña al cargar la página
+// Enfocar contraseña al cargar
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('admin-password').focus();
 });
