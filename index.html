@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Escaparate</title>
+  <title>Escaparate</title>
 </head>
 <body>
-  <h1>Escaparate de productos</h1>
+  <h1>Mis productos</h1>
   <div id="productos"></div>
 
   <script>
-    // Aquí iría el código para cargar tus productos automáticamente
-    fetch('/productos.json')
+    // Esto cargará tus productos automáticamente desde los archivos creados en Decap CMS
+    fetch('/productos/index.json')
       .then(res => res.json())
       .then(data => {
-        const container = document.getElementById('productos');
+        const cont = document.getElementById('productos');
         data.forEach(p => {
-          container.innerHTML += `
+          cont.innerHTML += `
             <div>
               <h2>${p.nombre}</h2>
               <p>${p.descripcion}</p>
